@@ -1,0 +1,71 @@
+version: "3.6"
+
+services:
+  
+  web:
+      build:
+        context: ./php
+        dockerfile: Dockerfile
+      restart: unless-stopped
+      container_name: php
+      depends_on:
+        - db
+      volumes:
+        - ./php:/var/www/html/
+      ports:
+        - 8000:80
+
+  db:
+    container_name: mysql
+    image: mysql:latest
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    ports:
+        - 8080:80
+    volumes:
+        - ./php:/var/www/html/
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - 8001:80
+    volumes:
+      - ./:/var/www/html/
+      - ./nginx/config.d/:/etc/nginx/config.conf/
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.1
+    container_name: elasticsearch
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./elasticsearch/config/elasticsearch.yml
+    ports:
+      - 9200:9200
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.10.1
+    container_name: kibana
+    environment:
+      ELASTICSEARCH_URL: "http://elasticsearch:9200"
+    ports:
+      - 5601:5601
+    volumes:
+      - ./kibana/config/kibana.yml
+    depends_on:
+      - elasticsearch
+volumes:
+  esdata1:
+    driver: local
